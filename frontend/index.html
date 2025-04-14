@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sales Tracker + Chatbot</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    /* Global Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #f4f7fc;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Light/Dark Mode */
+    body.dark-mode {
+      background-color: #2f2f2f;
+      color: white;
+    }
+
+    .toggle-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #333;
+      color: white;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .sales-section, .chat-section {
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+
+    /* Sales Section */
+    .sales-section {
+      flex: 3;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+    }
+
+    .sales-section.dark-mode {
+      background-color: #333;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px 20px;
+      text-align: center;
+      border-bottom: 1px solid #ccc;
+    }
+
+    th {
+      background-color: #ddd;
+      font-weight: bold;
+    }
+
+    tr:hover {
+      background-color: #f4f4f4;
+      cursor: pointer;
+    }
+
+    /* Chat Section */
+    .chat-section {
+      flex: 1;
+      background-color: #fff;
+      border-left: 2px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-section.dark-mode {
+      background-color: #444;
+    }
+
+    #chatWindow {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #chatWindow.dark-mode {
+      background-color: #333;
+      color: white;
+    }
+
+    .user-message, .bot-message {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .user-message {
+      justify-content: flex-end;
+    }
+
+    .bot-message {
+      justify-content: flex-start;
+    }
+
+    .message-text {
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 10px;
+      max-width: 70%;
+      word-wrap: break-word;
+    }
+
+    .user-message .message-text {
+      background-color: #5c7cfa;
+      color: white;
+    }
+
+    .bot-message .message-text {
+      background-color: #eee;
+    }
+
+    #userInput {
+      padding: 10px;
+      width: 70%;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #5c7cfa;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #4a68c7;
+    }
+
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Light/Dark Mode Toggle Button -->
+  <button class="toggle-btn" onclick="toggleDarkMode()">🌙</button>
+
+  <!-- Left Side: Sales Tracker -->
+  <div class="sales-section">
+    <h1>Sales Tracker Dashboard</h1>
+
+    <form id="salesForm" onsubmit="addSale(event)">
+      <input type="text" id="product" placeholder="Product Name" required>
+      <input type="number" id="quantity" placeholder="Quantity" required>
+      <input type="number" id="price" placeholder="Price" required>
+      <button type="submit">Add Sale</button>
+    </form>
+
+    <table id="salesTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product</th>
+          <th>Quantity</th>
+          <th>Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Right Side: Gemini Chatbot -->
+  <div class="chat-section">
+    <h2>Gemini Chatbot</h2>
+    <div id="chatWindow"></div>
+    <div class="user-message" style="display: none;" id="loadingMessage">
+      <div class="message-text">
+        <div class="loading-spinner"></div> Thinking...
+      </div>
+    </div>
+    <div>
+      <input type="text" id="userInput" placeholder="Type your message...">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let saleIndex = 1;
+    let shouldSpeak = false; // Track if speech is enabled
+
+    // Toggle Dark Mode
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      document.querySelector('.sales-section').classList.toggle('dark-mode');
+      document.querySelector('.chat-section').classList.toggle('dark-mode');
+      document.querySelector('#chatWindow').classList.toggle('dark-mode');
+    }
+
+    // Sales Tracker Logic
+    function addSale(event) {
+      event.preventDefault();
+      const product = document.getElementById("product").value;
+      const quantity = parseInt(document.getElementById("quantity").value);
+      const price = parseFloat(document.getElementById("price").value);
+      const total = (quantity * price).toFixed(2);
+
+      const row = `<tr>
+        <td>${saleIndex++}</td>
+        <td>${product}</td>
+        <td>${quantity}</td>
+        <td>${price}</td>
+        <td>${total}</td>
+      </tr>`;
+
+      document.querySelector("#salesTable tbody").innerHTML += row;
+      document.getElementById("salesForm").reset();
+    }
+
+    // Chatbot Logic
+    async function sendMessage() {
+      const input = document.getElementById("userInput").value;
+      if (!input) return;
+
+      const chatWindow = document.getElementById("chatWindow");
+      const loadingMessage = document.getElementById("loadingMessage");
+
+      chatWindow.innerHTML += `<div class="user-message"><div class="message-text">${input}</div></div>`;
+      document.getElementById("userInput").value = "";
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+
+      loadingMessage.style.display = 'flex';
+
+      const response = await fetch("http://127.0.0.1:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input }),
+      });
+
+      const data = await response.json();
+      chatWindow.innerHTML += `<div class="bot-message"><div class="message-text">${data.response}</div></div>`;
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+      loadingMessage.style.display = 'none';
+
+      // Check if user asked to "speak"
+      if (input.toLowerCase().includes("speak")) {
+        shouldSpeak = true;
+      }
+
+      // Speak the bot's response if the user requested it
+      if (shouldSpeak) {
+        speakMessage(data.response);
+      }
+    }
+
+    // Text-to-Speech: Speak the bot's response
+    function speakMessage(message) {
+      const speech = new SpeechSynthesisUtterance(message);
+      speech.lang = 'en-US'; // You can change the language to any supported language
+      window.speechSynthesis.speak(speech);
+    }
+  </script>
+
+</body>
+</html>
