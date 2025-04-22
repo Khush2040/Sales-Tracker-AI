@@ -283,10 +283,11 @@
     <button class="clear-chat-btn" onclick="clearChat()">Clear Chat</button>
   </div>
 
-  <!-- Background Music -->
-  <audio id="bgMusic" loop autoplay>
-    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mp3">
+  <audio id="bgMusic" autoplay loop>
+    <source src="Pufino - Magnificent (freetouse.com).mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
   </audio>
+  
 
   <script>
     let saleIndex = 1;
@@ -359,6 +360,13 @@
       localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
       document.getElementById("chatWindow").innerHTML = "";
     }
+    const music = document.getElementById('bgMusic');
+    music.play().catch(() => {
+    // If autoplay fails, wait for user interaction
+    window.addEventListener('click', () => {
+      music.play();
+    }, { once: true });
+  });
 
     window.onload = loadChatHistory;
   </script>
